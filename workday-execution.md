@@ -1,0 +1,164 @@
+# Workday Execution
+
+Your job during the workday is **oversight, not writing code**. Claude selects cards to work on by querying Jira, pre-flights each one with you, implements the changes, and prepares pull requests. You answer pre-flight questions, respond to blockers, and review diffs before PRs are opened.
+
+Each ticket produces one pull request. You control how many cards run in parallel — just say no when asked if you want to prepare another.
+
+---
+
+## Merged PR Review
+
+Before selecting new work, Claude checks for in-progress cards that may already be done.
+
+Claude queries Jira for all in-progress cards assigned to you, then uses the GitHub CLI to find pull requests whose source branch contains each ticket's ID. For each card with a merged PR, Claude asks: "Is [TICKET-ID] — [title] complete?"
+
+**If yes:**
+- Set the card status to "Acceptance Testing"; if that status is not available, set it to "Ready for QA"
+- Check the associated worktree:
+  - If the worktree is clean and all commits have been pushed: delete the worktree silently
+  - If the worktree is not clean or has unpushed commits: ask "This worktree has local changes or unpushed commits — should I commit, push, and delete it, or leave it in place?"
+
+**If no:** leave the card and worktree as-is and move on.
+
+Once all cards with merged PRs have been reviewed, ask: "Are there any other cards you've completed that I should close out?" If yes, ask for the IDs and follow the same completed card workflow for each: set the status to "Acceptance Testing" (or "Ready for QA" if unavailable), and handle the worktree as described above.
+
+Once all completed cards have been handled, proceed to card selection.
+
+---
+
+## Card Selection
+
+Claude selects cards through the following flow. This repeats each time a new card is needed.
+
+**In-progress cards first:**
+
+Claude queries Jira for your in-progress cards assigned to you in the current sprint, sorted by rank, and presents them as a numbered list:
+
+```
+In-progress cards:
+1. PROJ-123 — Fix login timeout on slow connections
+2. PROJ-117 — Refactor auth token storage
+3. None of these
+```
+
+Select a number. Claude begins the pre-flight for that card immediately.
+
+**When in-progress cards are exhausted:**
+
+When no in-progress cards remain, or you select "None of these", Claude queries the top 5 to-do cards in the current sprint by rank:
+
+```
+To-do cards (top 5 by rank):
+1. PROJ-131 — Add push notification support
+2. PROJ-134 — Migrate settings screen to new design system
+3. PROJ-138 — Fix crash on tablet rotation
+4. PROJ-140 — Update API client to v2
+5. PROJ-145 — Add unit tests for sync manager
+6. Provide a card ID
+```
+
+Select a number, or select "Provide a card ID" to type in any ticket ID. Claude begins the pre-flight for the selected card.
+
+---
+
+## Per-Card Pre-Flight
+
+Before touching any code for a card, Claude reads the ticket, identifies any ambiguities or decisions that aren't answerable from the codebase alone, and asks them all at once. Wait for answers before Claude proceeds.
+
+If there are no upfront questions, Claude proceeds immediately.
+
+---
+
+## Execution
+
+Run this prompt once to start the workday.
+
+```
+First, run the merged PR review: query my in-progress Jira cards assigned to
+me, then use the GitHub CLI to find pull requests whose source branch contains
+each ticket ID. For each card with a merged PR, ask me if the card is complete.
+
+If yes:
+- Set the card status to "Acceptance Testing"; if unavailable, set it to
+  "Ready for QA"
+- Check the associated worktree. If clean and fully pushed, delete it. If not,
+  ask: "This worktree has local changes or unpushed commits — should I commit,
+  push, and delete it, or leave it in place?"
+
+If no: leave the card and worktree as-is.
+
+Once all merged PRs have been reviewed, ask: "Are there any other cards
+you've completed that I should close out?" If yes, ask for the IDs and follow
+the same completed card workflow for each.
+
+Once all completed cards have been handled, begin card selection: query my
+in-progress Jira cards assigned to me in the current sprint sorted by rank,
+present them numbered with key and title, add "None of these" as the last
+option, and ask me to select one.
+
+For the selected card, do the pre-flight: read the ticket, identify any
+ambiguities or decisions not answerable from the codebase alone, and ask them
+all now. Wait for my answers.
+
+As soon as pre-flight answers are received, create a git worktree and branch
+for that card and begin implementation immediately. Name the branch
+`claude/[TICKET-ID]/[camelCaseName]` where [camelCaseName] is a 2–4 word
+camel case summary of the work (e.g. `claude/PROJ-123/fixLoginTimeout`). If
+that branch name already exists, try a different camel case name. If no
+distinct name can be found, append an incrementing counter (e.g.
+`claude/PROJ-123/fixLoginTimeout2`).
+
+While that card is executing, ask: "Would you like to prepare another card
+for me to work on in parallel?" If yes, follow the card selection flow and
+pre-flight the next card. Start it as soon as pre-flight answers arrive.
+Repeat this offer each time a new card begins executing.
+
+For each card in execution:
+- Make judgment calls consistent with existing patterns
+- Log each non-obvious decision so it appears at review time
+- If you hit uncertainty that a quick question would resolve better than your
+  best guess, ask — you don't need to be fully blocked to interrupt. Prefer
+  a short question over a decision the developer might want to make themselves
+
+Before creating the PR, write unit tests and confirm they pass. Use the
+framework appropriate for the project's platform:
+- Native iOS / cross-platform Swift: XCTest
+- Native Android: JUnit
+- Flutter: flutter_test
+- Node.js / Firebase / Amplify: Jest
+
+Test public interfaces and meaningful branching logic — happy path, error
+paths, and edge cases that could realistically behave differently. Do not test
+private helpers, simple getters/setters, or generated code. Aim for ones to
+tens of tests per card, not exhaustive line coverage.
+
+If tests fail, apply the same judgment used for questions during execution: fix
+straightforward issues silently; ask if there is meaningful uncertainty about
+the right approach.
+
+Do not create the PR until all tests pass.
+
+Completion happens in two stages.
+
+**Stage 1 — Implementation complete:**
+1. Create a draft pull request using the GitHub CLI and show me the URL
+2. Ask: "Is this pull request ready for review?"
+
+From this point, continue responding to any prompts to refine the solution.
+After every response, ask: "Is this pull request ready for review?"
+
+**Stage 2 — Ready for review:**
+When the developer answers yes:
+1. Add a comment to the Jira ticket summarizing what was implemented; note
+   explicitly that both the work and this comment were completed by Claude
+2. Mark the pull request as Ready for Review using the GitHub CLI
+3. Remove the worktree
+```
+
+---
+
+## Pull Request Reviews
+
+When Claude completes the implementation it opens a draft PR and begins asking after every response whether it's ready for review. Use this time to read the diff, prompt Claude for refinements, or push your own changes to the branch. When you're satisfied, tell Claude the PR is ready — it will add the Jira comment and mark the PR as Ready for Review, making it visible to the rest of the team.
+
+> **Note on PR descriptions:** Claude will generate the PR description automatically. A standard template for PR descriptions is planned — see the Open Questions section of the main guidelines.
