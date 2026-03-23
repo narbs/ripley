@@ -295,6 +295,8 @@ The goal is that developers never open the Jira UI for routine updates. Jira sta
 
 > **Note on Copilot CLI:** If some developers prefer Copilot CLI for simple Jira status changes, that's fine. The advantage of Claude Code is context — it can write meaningful Jira comments derived from your daily log rather than one-liners. For anything beyond a status change, use Claude Code.
 
+> **Jira CLI setup and command reference** have moved to [workday-execution.md](workday-execution.md#before-you-start), which is the primary working document for day-to-day use.
+
 ### What AI Keeps Updated vs. What Humans Own
 
 | Task | Who does it |
@@ -332,6 +334,22 @@ Deep work blocks: [describe when you'll focus on each]
 
 AI evaluation should then assess each project independently but also flag if the total load across projects appears unrealistic.
 
+### Cards That Span Multiple Repos
+
+When a single Jira card requires changes in more than one repository, a few adjustments keep things coherent.
+
+**Starting the session:** Open Claude Code from a parent directory that contains all relevant repos, or from the primary repo and provide explicit relative paths to the others. Name the repos upfront so Claude knows the layout before touching code:
+
+> "This card touches both `repo-a` and `repo-b`. The repos are siblings — `../repo-b` is the path relative to the current directory."
+
+**Worktrees:** Create a branch in each affected repo under the same ticket ID:
+- `claude/PROJ-123/fixLoginTimeout` in `repo-a`
+- `claude/PROJ-123/fixLoginTimeout` in `repo-b`
+
+**Pull requests:** Open one PR per repo. The PR description in each should name all repos involved and link to the others, so reviewers have the full picture.
+
+**Pre-flight:** Claude should ask during pre-flight which repos are in scope and confirm the relative paths before any implementation begins.
+
 ### Solo-Developer Projects
 
 When you are the only developer on a project, the daily log and milestone review are especially important — there is no peer visibility to catch drift. Compensate by:
@@ -339,6 +357,40 @@ When you are the only developer on a project, the daily log and milestone review
 1. Being more explicit in your goals about *why* you're doing something, not just what (this helps AI evaluate whether the work is actually moving the milestone)
 2. Running a milestone review every week without fail, even if it's brief
 3. Flagging in your daily goals when you're doing exploratory/uncertain work, which should be estimated as XL regardless of apparent scope
+
+---
+
+## Claude Code Setup
+
+To get full value from the workday execution workflow, configure Claude Code to run tool calls without prompting for each one. The developer's job is to review diffs and PRs — not to approve every terminal command.
+
+Add the following to `.claude/settings.json` in each project repo (or `~/.claude/settings.json` to apply globally). Adjust for your platform:
+
+```json
+{
+  "allowedTools": [
+    "Bash(git *)",
+    "Bash(jira *)",
+    "Bash(gh *)",
+    "Bash(osascript *)",
+    "Bash(./gradlew *)",
+    "Bash(flutter *)",
+    "Bash(xcodebuild *)"
+  ]
+}
+```
+
+| Tool pattern | Purpose |
+|---|---|
+| `Bash(git *)` | Branch, commit, push, worktree management |
+| `Bash(jira *)` | All Jira CLI operations |
+| `Bash(gh *)` | GitHub CLI — PRs, branch queries |
+| `Bash(osascript *)` | macOS system notifications for blockers |
+| `Bash(./gradlew *)` | Android builds and tests |
+| `Bash(flutter *)` | Flutter builds and tests |
+| `Bash(xcodebuild *)` | iOS builds and tests |
+
+Add or remove entries based on your project's tech stack.
 
 ---
 
@@ -455,9 +507,17 @@ Several improvements to the forecasting section are planned:
 
 ### Blocker notifications in advanced mode
 
-When Claude is running in parallel across multiple worktrees, it needs a way to interrupt the developer that is hard to miss. The current guidelines say Claude "interrupts and describes the blocker clearly" — but that assumes the developer is watching the terminal. In practice, a developer overseeing multiple agents may not be looking at any one session when a blocker surfaces.
+When Claude is running in parallel across multiple worktrees, it needs a way to interrupt the developer that is hard to miss. A developer overseeing multiple agents may not be watching any one terminal session when a blocker surfaces.
 
-Open questions: Should Claude trigger a system notification (e.g. via a shell command)? Send a message to a shared Slack channel? Write to a shared blockers file the developer polls? The mechanism needs to be low-friction to set up, reliable across the team's machines, and not so noisy that it gets ignored. Should be resolved before advanced mode is rolled out to the team.
+**Recommended approach (macOS):** Claude fires a system notification via `osascript`:
+
+```bash
+osascript -e 'display notification "PROJ-123 is blocked: [reason]" with title "Ripley — Blocker"'
+```
+
+This appears as a standard macOS notification and works even when the terminal is in the background. Requires `Bash(osascript *)` in your `allowedTools` — see the [Claude Code Setup](#claude-code-setup) section.
+
+**Fallback (cross-platform):** Claude appends the blocker to a `blockers.md` file in the repo root. The developer can keep this file open in a separate window or monitor it on a short polling interval. Less immediate than a system notification but works on any OS.
 
 ---
 

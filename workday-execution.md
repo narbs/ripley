@@ -4,6 +4,73 @@ Your job during the workday is **oversight, not writing code**. Claude selects c
 
 Each ticket produces one pull request. You control how many cards run in parallel — just say no when asked if you want to prepare another.
 
+## Before You Start
+
+### Setup: Eliminate Permission Prompts
+
+By default, Claude Code asks for permission every time it runs a `jira` CLI command. Add it to your allowed tools once and the prompts go away. Add the following to your project's `.claude/settings.json` (or `~/.claude/settings.json` to apply across all projects):
+
+```json
+{
+  "allowedTools": ["Bash(jira *)"]
+}
+```
+
+This grants Claude permission to run any `jira` CLI command without prompting. See the [Claude Code Setup](ai-assisted-development-guidelines.md#claude-code-setup) section in the main guidelines for a full allowlist covering git, GitHub CLI, and platform build tools.
+
+### Jira CLI Command Reference
+
+Credentials and config are pre-configured in the environment — no extra auth steps needed.
+
+**Common commands:**
+
+```bash
+# View a ticket
+jira issue view ISSUE-KEY
+
+# Create a story with parent epic and fix version
+cat description.md | jira issue create -tStory -pPROJ -s"Title" --parent EPIC-KEY --fix-version 0.2 --no-input
+
+# Update a ticket description
+cat file.md | jira issue edit ISSUE-KEY --no-input
+
+# Link two issues
+jira issue link ISSUE-1 ISSUE-2 Relates
+
+# Add a watcher
+jira issue watch ISSUE-KEY "Full Name"
+
+# Add a ticket to a sprint
+jira sprint add SPRINT-ID ISSUE-KEY
+```
+
+**Description format (markdown):**
+
+```markdown
+### Description formatted by Claude
+
+## Story
+**In order to** …
+**As a** …
+**I want** … **so that** …
+
+## Acceptance Criteria
+\`\`\`gherkin
+Scenario: 1 - …
+Given …
+When …
+Then …
+\`\`\`
+(Each scenario in its own code block, numbered)
+
+## Implementation Notes
+(optional)
+```
+
+**Notes:**
+- Always pipe descriptions with `cat` — don't strip the attribution header
+- Use `--fix-version` for the version field, not labels
+
 ---
 
 ## Merged PR Review
@@ -32,12 +99,12 @@ Claude selects cards through the following flow. This repeats each time a new ca
 
 **In-progress cards first:**
 
-Claude queries Jira for your in-progress cards assigned to you in the current sprint, sorted by rank, and presents them as a numbered list:
+Claude queries Jira for in-progress cards assigned to you in the current sprint, sorted by rank. If there are none, it falls back to unassigned in-progress cards in the current sprint. Unassigned cards are marked so you can tell at a glance:
 
 ```
 In-progress cards:
 1. PROJ-123 — Fix login timeout on slow connections
-2. PROJ-117 — Refactor auth token storage
+2. PROJ-117 — Refactor auth token storage [unassigned]
 3. None of these
 ```
 
@@ -57,7 +124,7 @@ To-do cards (top 5 by rank):
 6. Provide a card ID
 ```
 
-Select a number, or select "Provide a card ID" to type in any ticket ID. Claude begins the pre-flight for the selected card.
+Select a number, or select "Provide a card ID" to type in any ticket ID. Claude immediately moves the selected card to In Progress in Jira, then begins the pre-flight.
 
 ---
 
@@ -91,10 +158,14 @@ Once all merged PRs have been reviewed, ask: "Are there any other cards
 you've completed that I should close out?" If yes, ask for the IDs and follow
 the same completed card workflow for each.
 
-Once all completed cards have been handled, begin card selection: query my
-in-progress Jira cards assigned to me in the current sprint sorted by rank,
-present them numbered with key and title, add "None of these" as the last
-option, and ask me to select one.
+Once all completed cards have been handled, begin card selection: query
+in-progress cards assigned to me in the current sprint, sorted by rank. If
+there are none, fall back to unassigned in-progress cards in the current
+sprint. Present them numbered with key and title; mark unassigned cards with
+[unassigned]. Add "None of these" as the last option and ask me to select one.
+
+If I select a to-do card (not already in-progress), move it to In Progress
+in Jira before starting the pre-flight.
 
 For the selected card, do the pre-flight: read the ticket, identify any
 ambiguities or decisions not answerable from the codebase alone, and ask them
