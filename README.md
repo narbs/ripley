@@ -5,7 +5,7 @@ A workflow for AI-assisted software development. Developer and machine collabora
 The core documents:
 
 - **[ai-assisted-development-guidelines.md](ai-assisted-development-guidelines.md)** — The full playbook: daily goals, workday execution, milestone tracking, Jira integration, and delivery forecasting
-- **[workday-execution.md](workday-execution.md)** — The execution prompt and protocol for running the workday
+- **[workday.md](workday.md)** — The execution prompt and protocol for running the workday
 
 ---
 

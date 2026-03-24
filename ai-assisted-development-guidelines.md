@@ -93,7 +93,7 @@ Act on any flags, fill in what you're not doing today, then save the finalized g
 
 ### Workday Execution: Let Claude Do the Work
 
-See **[workday-execution.md](workday-execution.md)** for the full workday execution workflow, including card selection, pre-flight, parallel execution, and the PR review requirement.
+See **[workday.md](workday.md)** for the full workday execution workflow, including card selection, pre-flight, parallel execution, and the PR review requirement.
 
 ---
 
@@ -295,7 +295,7 @@ The goal is that developers never open the Jira UI for routine updates. Jira sta
 
 > **Note on Copilot CLI:** If some developers prefer Copilot CLI for simple Jira status changes, that's fine. The advantage of Claude Code is context — it can write meaningful Jira comments derived from your daily log rather than one-liners. For anything beyond a status change, use Claude Code.
 
-> **Jira CLI setup and command reference** have moved to [workday-execution.md](workday-execution.md#before-you-start), which is the primary working document for day-to-day use.
+> **Jira CLI setup and command reference** have moved to [workday.md](workday.md#before-you-start), which is the primary working document for day-to-day use.
 
 ### What AI Keeps Updated vs. What Humans Own
 
