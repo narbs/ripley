@@ -43,6 +43,9 @@ Your job is **oversight**, not writing code.
 
 > Think of Claude as a developer on your team — you're the tech lead.
 
+- You are responsible for the code Claude generates
+- Review diffs as if you wrote them yourself
+
 ---
 
 # Starting the Workday
@@ -71,13 +74,15 @@ Claude checks what landed since your last session.
 
 # Step 2: Card Selection
 
-Claude queries your sprint queue.
+Claude queries the Jira project configured for this working directory.
 
 - In-progress cards first
 - Then to-do, ordered by priority
 - Presents a numbered list
 
 **You pick a number.**
+
+*\* Jira setup: see `/workday` or the last slide*
 
 ---
 
@@ -148,6 +153,8 @@ Multiple cards in flight at once.
 1. You review the draft PR — Claude logs non-obvious decisions inline
 2. You tell Claude it's ready
 3. Claude adds a Jira comment and marks the PR ready for review
+
+**You are responsible for the code and the pull request.**
 
 ---
 
