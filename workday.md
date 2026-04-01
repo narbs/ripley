@@ -294,10 +294,11 @@ distinct name can be found, append an incrementing counter (e.g.
 
 After creating the worktree, print: "Working directory: [full path to worktree]"
 
-While that card is executing, ask: "Would you like to prepare another card
-for me to work on in parallel?" If yes, follow the card selection flow and
-pre-flight the next card. Start it as soon as pre-flight answers arrive.
-Repeat this offer each time a new card begins executing.
+**Parallel work:** After handing off the card, always ask: "Would you like
+to prepare another card for me to work on in parallel?" If yes, follow the
+card selection flow and pre-flight the next card. Start it as soon as
+pre-flight answers arrive. Repeat this offer each time a new card begins
+executing.
 
 For each card in execution:
 - Make judgment calls consistent with existing patterns
