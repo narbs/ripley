@@ -364,6 +364,8 @@ After creating the worktree, print: "Working directory: [full path to worktree]"
 Also print: "▶ Status: [PROJECT-NAME] | [TICKET-ID] — [ticket title]"
 where PROJECT-NAME is the name of the repo root directory.
 
+If this is a flutter project, copy the android/key.properties and android/local.properties from the main project working directory (do not overwrite files if they exist) as these files are not source controlled but needed for the build. Also, do an `fvm flutter pub get`.
+
 While that card is executing, ask: "Would you like to prepare another card
 for me to work on in parallel?" If yes, follow the card selection flow and
 pre-flight the next card. Start it as soon as pre-flight answers arrive.
